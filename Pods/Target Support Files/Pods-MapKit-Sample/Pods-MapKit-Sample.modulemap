@@ -1,0 +1,6 @@
+framework module Pods_MapKit_Sample {
+  umbrella header "Pods-MapKit-Sample-umbrella.h"
+
+  export *
+  module * { export * }
+}
