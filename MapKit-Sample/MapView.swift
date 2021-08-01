@@ -7,7 +7,6 @@
 
 import SwiftUI
 import MapKit
-import Firebase
 import CoreLocation
 
 struct MapView: View {
@@ -17,18 +16,20 @@ struct MapView: View {
     @State private var showingModal = false
     
     var body: some View {
-    
+        
         NavigationView{
             mapView(manager: $manager, alert: $alert).alert(isPresented: $alert) {
                 Alert(title: Text("Please Enable Location Access In Setting Panel!!!"))
             }
             .navigationBarTitle("Map", displayMode: .inline)
-            .navigationBarItems(leading:
-                                    Button("Open") {
-                                        self.showingModal.toggle()
-                                    }.sheet(isPresented: $showingModal) {
-                                        ModalView()
-                                    }
+            .navigationBarItems(trailing:
+                                    
+                                        Button("ピンを立てる") {
+                                            self.showingModal.toggle()
+                                        }.sheet(isPresented: $showingModal) {
+                                            ModalView()
+                                        }
+                                    
             )
         }
     }
@@ -36,7 +37,7 @@ struct MapView: View {
 
 struct mapView : UIViewRepresentable {
     
-    typealias UIViewType = MKMapView
+    //    typealias UIViewType = MKMapView
     
     @Binding var manager : CLLocationManager
     @Binding var alert : Bool
@@ -49,16 +50,23 @@ struct mapView : UIViewRepresentable {
     }
     
     func makeUIView(context: UIViewRepresentableContext<mapView>) -> MKMapView {
+        let center = CLLocationCoordinate2D(latitude: 35.6804, longitude: 139.7690)
+        let region = MKCoordinateRegion(center: center, latitudinalMeters: 500, longitudinalMeters: 500)
+        map.region = region
+        
+        
         manager.delegate = context.coordinator
         manager.startUpdatingLocation()
         map.showsUserLocation = true
         manager.requestWhenInUseAuthorization()
         return map
+    
     }
     
     func updateUIView(_ uiView: MKMapView, context: UIViewRepresentableContext<mapView>) {
         
     }
+    
     class Coordinator: NSObject, CLLocationManagerDelegate {
         
         var parent : mapView
@@ -75,44 +83,31 @@ struct mapView : UIViewRepresentable {
             }
         }
         
+        
+        
         func locationManager(_ manager: CLLocationManager, didUpdateLocations locations:[CLLocation]) {
             
             let location = locations.last
+           
+            _ = CLGeocoder()
             
-            let point = MKPointAnnotation()
+            manager.stopUpdatingLocation()
             
-            let georeader = CLGeocoder()
-            georeader.reverseGeocodeLocation(location!) { (places, err) in
-                
-                if err != nil{
-                    
-                    print((err?.localizedDescription)!)
-                    return
-                }
-                
-                let place = places?.first?.locality
-                point.title = place
-                point.subtitle = "Current Place"
-                point.coordinate = location!.coordinate
-                self.parent.map.removeAnnotations(self.parent.map.annotations)
-                self.parent.map.addAnnotation(point)
-                
-                
-                let region = MKCoordinateRegion(center: location!.coordinate, latitudinalMeters: 1000, longitudinalMeters: 10000)
-                print(region)
+             let region = MKCoordinateRegion(center: location!.coordinate, latitudinalMeters: 500, longitudinalMeters: 500)
+            print(region)
+            //                self.parent.map.region = region
+            withAnimation{
                 self.parent.map.region = region
-                
                 
             }
             
         }
-        
-    }
     
+    }
 }
 
-struct MapView_Previews: PreviewProvider {
-    static var previews: some View {
-        MapView()
-    }
-}
+//struct MapView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        MapView()
+//    }
+//}
