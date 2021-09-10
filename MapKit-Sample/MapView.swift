@@ -7,7 +7,6 @@
 
 import SwiftUI
 import MapKit
-import Firebase
 import CoreLocation
 
 struct MapView: View {
@@ -16,27 +15,54 @@ struct MapView: View {
     @State var alert = false
     @State private var showingModal = false
     
-    var body: some View {
+    @State var title = ""
+    @State var subtitle = ""
     
+    var body: some View {
+        //Group{
+        
         NavigationView{
-            mapView(manager: $manager, alert: $alert).alert(isPresented: $alert) {
-                Alert(title: Text("Please Enable Location Access In Setting Panel!!!"))
-            }
+            
+            ZStack(alignment: .bottom, content: {
+                        mapView(manager: $manager, alert: $alert, title: $title, subtitle: $subtitle).alert(isPresented: $alert) {
+
+                            Alert(title: Text("Please Enable Location Access In Setting Panel!!!"))
+                        }
+
+                        // 地名を取得した場合に表示
+                        if self.title != "" {
+                            HStack(spacing: 12) {
+                                Image(systemName: "info.circle.fill").font(.largeTitle).foregroundColor(.black)
+                                VStack(alignment: .leading, spacing: 5){
+                                    Text(self.title).font(.body).foregroundColor(.black)
+                                    Text(self.subtitle).font(.caption).foregroundColor(.gray)
+                                }
+                            Spacer()
+                            }
+                            .padding()
+                            // "Color"はAssets.xcassetsで設定
+                            .background(Color("Color"))
+                            .cornerRadius(15)
+                            .offset(y: -30)
+                        .padding()
+                        }
+                    })
             .navigationBarTitle("Map", displayMode: .inline)
-            .navigationBarItems(leading:
-                                    Button("Open") {
-                                        self.showingModal.toggle()
-                                    }.sheet(isPresented: $showingModal) {
-                                        ModalView()
-                                    }
+            .navigationBarItems(trailing:
+                                        Button("ピンを立てる") {
+                                            self.showingModal.toggle()
+                                        }.sheet(isPresented: $showingModal) {
+                                            ModalView()
+                                        }
             )
         }
+      //}//Group
     }
-}
+
 
 struct mapView : UIViewRepresentable {
     
-    typealias UIViewType = MKMapView
+    //    typealias UIViewType = MKMapView
     
     @Binding var manager : CLLocationManager
     @Binding var alert : Bool
@@ -48,17 +74,26 @@ struct mapView : UIViewRepresentable {
         return mapView.Coordinator(parent1: self)
     }
     
+    @Binding var title : String
+    @Binding var subtitle : String
+    
     func makeUIView(context: UIViewRepresentableContext<mapView>) -> MKMapView {
+        let center = CLLocationCoordinate2D(latitude: 35.6804, longitude: 139.7690)
+        let region = MKCoordinateRegion(center: center, latitudinalMeters: 500, longitudinalMeters: 500)
+        map.region = region
+        
         manager.delegate = context.coordinator
         manager.startUpdatingLocation()
         map.showsUserLocation = true
         manager.requestWhenInUseAuthorization()
         return map
+    
     }
     
     func updateUIView(_ uiView: MKMapView, context: UIViewRepresentableContext<mapView>) {
         
     }
+    
     class Coordinator: NSObject, CLLocationManagerDelegate {
         
         var parent : mapView
@@ -84,35 +119,43 @@ struct mapView : UIViewRepresentable {
             let georeader = CLGeocoder()
             georeader.reverseGeocodeLocation(location!) { (places, err) in
                 
-                if err != nil{
-                    
+                if err != nil {
                     print((err?.localizedDescription)!)
                     return
                 }
                 
-                let place = places?.first?.locality
+                self.parent.title = (places?.first?.administrativeArea)!
+                self.parent.subtitle = (places?.first?.locality)!
+                
+                let place = places?.first?.administrativeArea
+                let subPlace = places?.first?.locality
                 point.title = place
-                point.subtitle = "Current Place"
+                point.subtitle = subPlace
+                
                 point.coordinate = location!.coordinate
                 self.parent.map.removeAnnotations(self.parent.map.annotations)
                 self.parent.map.addAnnotation(point)
                 
                 
-                let region = MKCoordinateRegion(center: location!.coordinate, latitudinalMeters: 1000, longitudinalMeters: 10000)
-                print(region)
-                self.parent.map.region = region
-                
                 
             }
             
+            manager.stopUpdatingLocation()
+            
+             let region = MKCoordinateRegion(center: location!.coordinate, latitudinalMeters: 500, longitudinalMeters: 500)
+            print(region)
+            //                self.parent.map.region = region
+            withAnimation{
+                self.parent.map.region = region
+                
+            }
         }
-        
     }
-    
 }
 
-struct MapView_Previews: PreviewProvider {
-    static var previews: some View {
-        MapView()
-    }
+//struct MapView_Previews: PreviewProvider {
+//    static var previews: some View {
+//        MapView()
+//    }
+//}
 }
